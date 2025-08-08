@@ -1,0 +1,36 @@
+{
+  "name": "the-gc-project",
+  "version": "1.0.0",
+  "description": "A comprehensive authentication system for The GC Project - Group Travel Planning Platform",
+  "main": "login.html",
+  "scripts": {
+    "start": "http-server -p 8000 -o",
+    "dev": "http-server -p 8000 -o -c-1",
+    "serve": "python -m http.server 8000"
+  },
+  "keywords": [
+    "authentication",
+    "firebase",
+    "mfa",
+    "travel",
+    "group-planning",
+    "javascript"
+  ],
+  "author": "The GC Project Team",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/the-gc-project.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/the-gc-project/issues"
+  },
+  "homepage": "https://github.com/your-username/the-gc-project#readme"
+} 
