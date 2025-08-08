@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firestore Debug - The GC Project</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .log {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #output {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Firestore Debug Console</h1>
+    <p>This page helps debug Firestore connection issues.</p>
+    
+    <div>
+        <button onclick="testAuth()">Test Authentication</button>
+        <button onclick="testFirestore()">Test Firestore Connection</button>
+        <button onclick="testUserDocument()">Test User Document</button>
+        <button onclick="testListener()">Test Real-time Listener</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+    
+    <div id="output"></div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4KaDKhQnHWPoHMAUgx8X5C1vZhQTtcuI",
+            authDomain: "the-gc-project.firebaseapp.com",
+            projectId: "the-gc-project",
+            storageBucket: "the-gc-project.firebasestorage.app",
+            messagingSenderId: "165239110971",
+            appId: "1:165239110971:web:8c5be8c564454900c8cb1e",
+            measurementId: "G-E2CWRXZNYN"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let testListener = null;
+
+        function log(message, type = 'log') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+
+        window.testAuth = function() {
+            log('Testing authentication state...', 'log');
+            
+            if (auth.currentUser) {
+                log(`✅ User is authenticated: ${auth.currentUser.email}`, 'success');
+                log(`User UID: ${auth.currentUser.uid}`, 'log');
+                log(`Email verified: ${auth.currentUser.emailVerified}`, 'log');
+                
+                // Test ID token
+                auth.currentUser.getIdToken().then((token) => {
+                    log(`✅ ID token obtained (length: ${token.length})`, 'success');
+                }).catch((error) => {
+                    log(`❌ Failed to get ID token: ${error.message}`, 'error');
+                });
+            } else {
+                log('❌ No authenticated user', 'error');
+                log('Please login first at /login.html', 'warning');
+            }
+        };
+
+        window.testFirestore = function() {
+            log('Testing Firestore connection...', 'log');
+            
+            try {
+                log(`Firestore instance: ${!!db}`, 'log');
+                log(`Project ID: ${firebaseConfig.projectId}`, 'log');
+                log('✅ Firestore initialized successfully', 'success');
+            } catch (error) {
+                log(`❌ Firestore initialization error: ${error.message}`, 'error');
+            }
+        };
+
+        window.testUserDocument = async function() {
+            if (!auth.currentUser) {
+                log('❌ No authenticated user for document test', 'error');
+                return;
+            }
+
+            log('Testing user document access...', 'log');
+            
+            try {
+                const userDocRef = doc(db, 'users', auth.currentUser.uid);
+                log(`Document path: users/${auth.currentUser.uid}`, 'log');
+                
+                const userDoc = await getDoc(userDocRef);
+                
+                if (userDoc.exists()) {
+                    log('✅ User document exists', 'success');
+                    log(`Document data: ${JSON.stringify(userDoc.data(), null, 2)}`, 'log');
+                } else {
+                    log('⚠️ User document does not exist', 'warning');
+                }
+            } catch (error) {
+                log(`❌ Error accessing user document: ${error.message}`, 'error');
+                log(`Error code: ${error.code}`, 'error');
+            }
+        };
+
+        window.testListener = function() {
+            if (!auth.currentUser) {
+                log('❌ No authenticated user for listener test', 'error');
+                return;
+            }
+
+            log('Testing real-time listener...', 'log');
+
+            // Stop existing listener if any
+            if (testListener) {
+                testListener();
+                testListener = null;
+                log('Stopped previous test listener', 'log');
+            }
+
+            try {
+                const userDocRef = doc(db, 'users', auth.currentUser.uid);
+                
+                testListener = onSnapshot(
+                    userDocRef,
+                    (doc) => {
+                        if (doc.exists()) {
+                            log('✅ Real-time listener working - document updated', 'success');
+                            log(`Data: ${JSON.stringify(doc.data(), null, 2)}`, 'log');
+                        } else {
+                            log('⚠️ Real-time listener: document does not exist', 'warning');
+                        }
+                    },
+                    (error) => {
+                        log(`❌ Real-time listener error: ${error.message}`, 'error');
+                        log(`Error code: ${error.code}`, 'error');
+                        log(`Error details: ${JSON.stringify(error, null, 2)}`, 'error');
+                    }
+                );
+
+                log('✅ Real-time listener started', 'success');
+            } catch (error) {
+                log(`❌ Failed to start real-time listener: ${error.message}`, 'error');
+            }
+        };
+
+        window.clearLogs = function() {
+            document.getElementById('output').innerHTML = '';
+        };
+
+        // Monitor auth state changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                log(`🔄 Auth state changed: User logged in (${user.email})`, 'log');
+            } else {
+                log('🔄 Auth state changed: User logged out', 'log');
+            }
+        });
+
+        // Initial status
+        log('🚀 Debug console initialized', 'success');
+        log('Click "Test Authentication" to start debugging', 'log');
+    </script>
+</body>
+</html>

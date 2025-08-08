@@ -1,22 +1,30 @@
-// Firebase Configuration
-// Replace with your Firebase project configuration
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { initializeFirestore, getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "your-app-id"
+    apiKey: "AIzaSyA4KaDKhQnHWPoHMAUgx8X5C1vZhQTtcuI",
+    authDomain: "the-gc-project.firebaseapp.com",
+    projectId: "the-gc-project",
+    storageBucket: "the-gc-project.firebasestorage.app",
+    messagingSenderId: "165239110971",
+    appId: "1:165239110971:web:8c5be8c564454900c8cb1e",
+    measurementId: "G-E2CWRXZNYN"
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+// Use initializeFirestore with long polling to avoid WebChannel 400s in some environments
+initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+const db = getFirestore(app);
 
 // Global variables
 let currentUser = null;
 let mfaSecret = null;
+let firestoreListeners = []; // Array to track active listeners
 
 // DOM Elements
 const loginForm = document.getElementById('loginForm');
@@ -24,18 +32,121 @@ const signupForm = document.getElementById('signupForm');
 const forgotPasswordForm = document.getElementById('forgotPasswordForm');
 const mfaSetup = document.getElementById('mfaSetup');
 
+// Firestore listener management
+function startFirestoreListeners() {
+    console.log("Starting Firestore listeners for UID:", auth.currentUser?.uid);
+    
+    if (!auth.currentUser) {
+        console.warn("No authenticated user, Firestore listeners not started.");
+        return;
+    }
+    
+    console.log("User logged in:", auth.currentUser.uid);
+    
+    // Add any real-time listeners here if needed
+    // Example: const userListener = onSnapshot(doc(db, 'users', auth.currentUser.uid), (doc) => {
+    //     console.log('User document updated:', doc.data());
+    // });
+    // firestoreListeners.push(userListener);
+    
+    console.log('Firestore listeners started successfully');
+}
+
+function stopFirestoreListeners() {
+    console.log('Stopping Firestore listeners...');
+    firestoreListeners.forEach(unsubscribe => {
+        if (typeof unsubscribe === 'function') {
+            unsubscribe();
+        }
+    });
+    firestoreListeners = [];
+    console.log('Firestore listeners stopped');
+}
+
+// Safe user doc read with REST fallback to avoid WebChannel Listen 400
+async function readUserDocSafely(userId) {
+    if (!auth.currentUser) {
+        console.warn('readUserDocSafely: No authenticated user — skipping Firestore');
+        return null;
+    }
+    try {
+        console.log('readUserDocSafely: getDoc users/' + userId);
+        const ref = doc(db, 'users', userId);
+        const snap = await getDoc(ref);
+        if (snap.exists()) return snap.data();
+        console.warn('readUserDocSafely: Document does not exist via SDK');
+        return null;
+    } catch (sdkError) {
+        console.warn('readUserDocSafely: SDK getDoc failed, falling back to REST', sdkError);
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/users/${userId}`;
+            const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+            if (!resp.ok) {
+                console.warn('readUserDocSafely: REST fetch failed', resp.status, await resp.text());
+                return null;
+            }
+            const json = await resp.json();
+            // Map Firestore REST fields to plain JS
+            const fields = json.fields || {};
+            const data = {
+                name: fields.name?.stringValue,
+                email: fields.email?.stringValue,
+                phone: fields.phone?.stringValue,
+                country: fields.country?.stringValue,
+                mfaEnabled: fields.mfaEnabled?.booleanValue === true,
+                mfaSecret: fields.mfaSecret?.stringValue
+            };
+            console.log('readUserDocSafely: REST fetch success');
+            return data;
+        } catch (restError) {
+            console.error('readUserDocSafely: REST fallback failed', restError);
+            return null;
+        }
+    }
+}
+
+// Firebase Auth accounts:lookup using POST with JSON body { idToken }
+async function lookupAccount() {
+    if (!auth.currentUser) {
+        console.warn('lookupAccount: No authenticated user — skipping');
+        return null;
+    }
+    try {
+        const idToken = await auth.currentUser.getIdToken();
+        const url = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${firebaseConfig.apiKey}`;
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken })
+        });
+        if (!resp.ok) {
+            const text = await resp.text();
+            console.error('lookupAccount: POST failed', resp.status, text);
+            return null;
+        }
+        const json = await resp.json();
+        console.log('lookupAccount: success', json);
+        return json;
+    } catch (error) {
+        console.error('lookupAccount: error', error);
+        return null;
+    }
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
     // Check if user is already logged in
-    auth.onAuthStateChanged(function(user) {
+    onAuthStateChanged(auth, function(user) {
         if (user) {
             currentUser = user;
-            console.log('User is signed in:', user.email);
-            // Redirect to dashboard or main app
-            // window.location.href = 'dashboard.html';
+            console.log("User logged in:", user.uid);
+            startFirestoreListeners();
         } else {
             currentUser = null;
             console.log('User is signed out');
+            // Stop Firestore listeners when user signs out
+            stopFirestoreListeners();
         }
     });
 
@@ -45,39 +156,11 @@ document.addEventListener('DOMContentLoaded', function() {
     forgotPasswordForm.addEventListener('submit', handleForgotPassword);
 });
 
-// Tab switching functionality
-function switchTab(tabName) {
-    // Hide all forms
-    document.querySelectorAll('.auth-form').forEach(form => {
-        form.classList.remove('active');
-    });
-    
-    // Remove active class from all tabs
-    document.querySelectorAll('.auth-tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    // Show selected form
-    if (tabName === 'login') {
-        document.getElementById('loginForm').classList.add('active');
-        document.querySelector('.auth-tab:first-child').classList.add('active');
-    } else if (tabName === 'signup') {
-        document.getElementById('signupForm').classList.add('active');
-        document.querySelector('.auth-tab:last-child').classList.add('active');
-    } else if (tabName === 'forgotPassword') {
-        document.getElementById('forgotPasswordForm').classList.add('active');
-    }
-    
-    // Clear all error messages
-    clearErrors();
-}
+// Tab switching functionality is now handled by tab-switcher.js
+// Use the global switchTab function
 
-// Clear all error messages
-function clearErrors() {
-    document.querySelectorAll('.alert').forEach(alert => {
-        alert.style.display = 'none';
-    });
-}
+// Clear all error messages is now handled by tab-switcher.js
+// Use the global clearErrors function
 
 // Show error message
 function showError(formId, message) {
@@ -119,18 +202,29 @@ async function handleLogin(e) {
     setLoading('login', true);
     
     try {
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
+        console.log('Login successful for user:', user.email);
+        console.log('User UID:', user.uid);
+        
+        // Validate account via REST (POST accounts:lookup)
+        await lookupAccount();
+        
         // Check if MFA is enabled for this user
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        if (userDoc.exists && userDoc.data().mfaEnabled) {
-            // Handle MFA verification
-            await handleMFAVerification(user);
+        if (auth.currentUser) {
+            console.log('Checking MFA status for user document: users/' + user.uid);
+            const userData = await readUserDocSafely(user.uid);
+            if (userData && userData.mfaEnabled) {
+                console.log('MFA is enabled for user, proceeding to verification');
+                await handleMFAVerification(user);
+            } else {
+                console.log('MFA is not enabled, proceeding to dashboard');
+                console.log('Login successful - redirecting to dashboard');
+                window.location.href = 'dashboard.html';
+            }
         } else {
-            // No MFA, proceed with login
-            console.log('Login successful');
-            // Redirect to dashboard
+            console.warn('No authenticated user after login - skipping Firestore operations');
             window.location.href = 'dashboard.html';
         }
     } catch (error) {
@@ -191,19 +285,29 @@ async function handleSignup(e) {
     
     try {
         // Create user account
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
+        console.log('User account created successfully for:', user.email);
+        console.log('User UID:', user.uid);
+        
         // Save user data to Firestore
-        await db.collection('users').doc(user.uid).set({
-            name: name,
-            email: email,
-            phone: phone,
-            country: country,
-            mfaEnabled: enableMFA,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        if (auth.currentUser) {
+            console.log('Saving user data to Firestore document: users/' + user.uid);
+            const userDocRef = doc(db, 'users', user.uid);
+            await setDoc(userDocRef, {
+                name: name,
+                email: email,
+                phone: phone,
+                country: country,
+                mfaEnabled: enableMFA,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            console.log('User data saved to Firestore successfully');
+        } else {
+            console.warn('No authenticated user after signup - skipping Firestore save');
+        }
         
         // If MFA is enabled, set it up
         if (enableMFA) {
@@ -253,7 +357,7 @@ async function handleForgotPassword(e) {
     setLoading('forgot', true);
     
     try {
-        await auth.sendPasswordResetEmail(email);
+        await sendPasswordResetEmail(auth, email);
         showSuccess('forgot', 'Password reset email sent! Check your inbox.');
         document.getElementById('forgotEmail').value = '';
     } catch (error) {
@@ -288,10 +392,23 @@ async function setupMFA(user) {
         // Display QR code
         const qrCodeElement = document.getElementById('qrCode');
         qrCodeElement.innerHTML = '';
-        QRCode.toCanvas(qrCodeElement, qrCodeData, {
-            width: 200,
-            margin: 2
-        });
+        
+        // Check if QRCode is available (loaded from CDN)
+        if (typeof QRCode !== 'undefined') {
+            QRCode.toCanvas(qrCodeElement, qrCodeData, {
+                width: 200,
+                margin: 2
+            });
+        } else {
+            // Fallback if QRCode library is not loaded
+            qrCodeElement.innerHTML = `
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <p><strong>Manual Setup:</strong></p>
+                    <p>Secret: <code>${secret}</code></p>
+                    <p>Add this secret to your authenticator app manually.</p>
+                </div>
+            `;
+        }
         
         // Show MFA setup section
         mfaSetup.style.display = 'block';
@@ -322,11 +439,18 @@ async function verifyMFA() {
         
         if (isValid) {
             // Save MFA secret to user document
-            await db.collection('users').doc(currentUser.uid).update({
-                mfaSecret: mfaSecret,
-                mfaEnabled: true,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            if (auth.currentUser) {
+                console.log('Saving MFA secret to Firestore document: users/' + currentUser.uid);
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                await updateDoc(userDocRef, {
+                    mfaSecret: mfaSecret,
+                    mfaEnabled: true,
+                    updatedAt: serverTimestamp()
+                });
+                console.log('MFA secret saved to Firestore successfully');
+            } else {
+                console.warn('No authenticated user - skipping MFA secret save to Firestore');
+            }
             
             showSuccess('signup', 'MFA setup completed! Your account is now secure.');
             
@@ -350,30 +474,40 @@ async function verifyMFA() {
 
 // Handle MFA verification during login
 async function handleMFAVerification(user) {
-    // This would typically show a modal or separate page for MFA input
-    // For now, we'll use a simple prompt
     const code = prompt('Please enter your 6-digit MFA code:');
     
     if (code) {
         try {
-            const userDoc = await db.collection('users').doc(user.uid).get();
-            const mfaSecret = userDoc.data().mfaSecret;
-            
-            if (verifyTOTP(mfaSecret, code)) {
-                console.log('MFA verification successful');
-                // Redirect to dashboard
-                window.location.href = 'dashboard.html';
+            if (auth.currentUser) {
+                console.log('Retrieving MFA secret for users/' + user.uid);
+                const data = await readUserDocSafely(user.uid);
+                const mfaSecret = data?.mfaSecret;
+                if (!mfaSecret) {
+                    alert('Unable to retrieve MFA secret. Please try again.');
+                    await signOut(auth);
+                    return;
+                }
+                console.log('MFA secret retrieved successfully');
+                
+                if (verifyTOTP(mfaSecret, code)) {
+                    console.log('MFA verification successful');
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert('Invalid MFA code. Please try logging in again.');
+                    await signOut(auth);
+                }
             } else {
-                alert('Invalid MFA code. Please try logging in again.');
-                await auth.signOut();
+                console.warn('No authenticated user - skipping MFA verification');
+                alert('Authentication error. Please try logging in again.');
+                await signOut(auth);
             }
         } catch (error) {
             console.error('MFA verification error:', error);
             alert('MFA verification failed. Please try again.');
-            await auth.signOut();
+            await signOut(auth);
         }
     } else {
-        await auth.signOut();
+        await signOut(auth);
     }
 }
 
@@ -397,8 +531,12 @@ function verifyTOTP(secret, code) {
 
 // Logout function
 function logout() {
-    auth.signOut().then(() => {
-        console.log('User signed out');
+    console.log('Logging out user...');
+    // Stop Firestore listeners before signing out
+    stopFirestoreListeners();
+    
+    signOut(auth).then(() => {
+        console.log('User signed out successfully');
         window.location.href = 'login.html';
     }).catch((error) => {
         console.error('Logout error:', error);
@@ -410,4 +548,7 @@ window.authFunctions = {
     logout,
     getCurrentUser: () => currentUser,
     isAuthenticated: () => !!currentUser
-}; 
+};
+
+// Make functions globally available for HTML onclick handlers
+window.verifyMFA = verifyMFA; 

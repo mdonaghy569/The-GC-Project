@@ -1,14 +1,13 @@
 // Firebase Configuration
-// Replace these values with your Firebase project configuration
-// You can find these values in your Firebase Console under Project Settings
-
+// Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "your-app-id"
+    apiKey: "AIzaSyA4KaDKhQnHWPoHMAUgx8X5C1vZhQTtcuI",
+    authDomain: "the-gc-project.firebaseapp.com",
+    projectId: "the-gc-project",
+    storageBucket: "the-gc-project.firebasestorage.app",
+    messagingSenderId: "165239110971",
+    appId: "1:165239110971:web:8c5be8c564454900c8cb1e",
+    measurementId: "G-E2CWRXZNYN"
 };
 
 // Export the configuration
