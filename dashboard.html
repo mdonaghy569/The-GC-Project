@@ -13,7 +13,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .dashboard-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -75,6 +75,57 @@
             font-size: 0.8rem;
             font-weight: 600;
         }
+        .trip-card {
+            border-left: 4px solid #667eea;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        .coming-soon {
+            opacity: 0.6;
+            position: relative;
+        }
+        .coming-soon::after {
+            content: "Coming Soon";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ffc107;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .quick-action {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 5px;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+        .quick-action:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stats-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
@@ -83,8 +134,8 @@
         <div class="dashboard-header">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h1><i class="fas fa-shield-alt"></i> The GC Project</h1>
-                    <p class="text-muted mb-0">Welcome to your secure dashboard</p>
+                    <h1><i class="fas fa-plane"></i> Made It Out the Group Chat</h1>
+                    <p class="text-muted mb-0">Transform group travel planning from chaos to coordination</p>
                 </div>
                 <div class="col-md-4 text-end">
                     <button class="btn btn-logout" onclick="logout()">
@@ -94,8 +145,37 @@
             </div>
         </div>
 
-        <!-- User Profile -->
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalTrips">0</div>
+                    <div class="stats-label">Active Trips</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalGroups">0</div>
+                    <div class="stats-label">Travel Groups</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalFriends">0</div>
+                    <div class="stats-label">Travel Buddies</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalSpent">$0</div>
+                    <div class="stats-label">Total Spent</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
         <div class="row">
+            <!-- User Profile -->
             <div class="col-md-4">
                 <div class="dashboard-card">
                     <div class="text-center">
@@ -119,50 +199,68 @@
                             <small class="text-muted">Country</small>
                         </div>
                     </div>
+
+                    <hr>
+
+                    <!-- Quick Actions -->
+                    <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+                    <div class="d-grid gap-2">
+                        <button class="quick-action" onclick="createNewTrip()">
+                            <i class="fas fa-plus"></i><br>New Trip
+                        </button>
+                        <button class="quick-action" onclick="joinGroup()">
+                            <i class="fas fa-users"></i><br>Join Group
+                        </button>
+                        <button class="quick-action" onclick="syncCalendar()">
+                            <i class="fas fa-calendar"></i><br>Sync Calendar
+                        </button>
+                        <button class="quick-action" onclick="openMoneyPot()">
+                            <i class="fas fa-piggy-bank"></i><br>Money Pot
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Features -->
+            <!-- Main Features -->
             <div class="col-md-8">
+                <!-- Active Trips -->
+                <div class="dashboard-card">
+                    <h5><i class="fas fa-plane"></i> Active Trips</h5>
+                    <div id="activeTrips">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-plane-departure fa-3x mb-3"></i>
+                            <p>No active trips yet</p>
+                            <button class="btn btn-primary" onclick="createNewTrip()">
+                                <i class="fas fa-plus"></i> Plan Your First Trip
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Travel Groups -->
+                <div class="dashboard-card">
+                    <h5><i class="fas fa-users"></i> Your Travel Groups</h5>
+                    <div id="travelGroups">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-users fa-3x mb-3"></i>
+                            <p>No travel groups yet</p>
+                            <button class="btn btn-primary" onclick="createNewGroup()">
+                                <i class="fas fa-plus"></i> Create Travel Group
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Features -->
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="dashboard-card">
-                            <div class="text-center">
-                                <div class="feature-icon">
-                                    <i class="fas fa-users"></i>
-                                </div>
-                                <h5>Group Travel</h5>
-                                <p class="text-muted">Plan trips with friends and family</p>
-                                <button class="btn btn-primary" disabled>
-                                    Coming Soon
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="dashboard-card">
-                            <div class="text-center">
-                                <div class="feature-icon">
-                                    <i class="fas fa-map-marked-alt"></i>
-                                </div>
-                                <h5>Travel Planning</h5>
-                                <p class="text-muted">Create and manage travel itineraries</p>
-                                <button class="btn btn-primary" disabled>
-                                    Coming Soon
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="dashboard-card">
+                        <div class="dashboard-card coming-soon">
                             <div class="text-center">
                                 <div class="feature-icon">
                                     <i class="fas fa-calendar-alt"></i>
                                 </div>
-                                <h5>Event Management</h5>
-                                <p class="text-muted">Organize and track group events</p>
+                                <h5>Calendar Sync</h5>
+                                <p class="text-muted">Sync with Google, Apple & Microsoft calendars</p>
                                 <button class="btn btn-primary" disabled>
                                     Coming Soon
                                 </button>
@@ -171,15 +269,45 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="dashboard-card">
+                        <div class="dashboard-card coming-soon">
                             <div class="text-center">
                                 <div class="feature-icon">
-                                    <i class="fas fa-cog"></i>
+                                    <i class="fas fa-robot"></i>
                                 </div>
-                                <h5>Account Settings</h5>
-                                <p class="text-muted">Manage your profile and security</p>
-                                <button class="btn btn-primary" onclick="openSettings()">
-                                    Open Settings
+                                <h5>AI Trip Recommendations</h5>
+                                <p class="text-muted">Get personalized trip suggestions</p>
+                                <button class="btn btn-primary" disabled>
+                                    Coming Soon
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="dashboard-card coming-soon">
+                            <div class="text-center">
+                                <div class="feature-icon">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <h5>Group Chat</h5>
+                                <p class="text-muted">Real-time messaging for trip coordination</p>
+                                <button class="btn btn-primary" disabled>
+                                    Coming Soon
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="dashboard-card coming-soon">
+                            <div class="text-center">
+                                <div class="feature-icon">
+                                    <i class="fas fa-vote-yea"></i>
+                                </div>
+                                <h5>Voting & Polls</h5>
+                                <p class="text-muted">Make group decisions easily</p>
+                                <button class="btn btn-primary" disabled>
+                                    Coming Soon
                                 </button>
                             </div>
                         </div>
@@ -190,7 +318,7 @@
 
         <!-- Authentication Status -->
         <div class="dashboard-card">
-            <h5><i class="fas fa-shield-alt"></i> Authentication Status</h5>
+            <h5><i class="fas fa-shield-alt"></i> Account Security</h5>
             <div class="row">
                 <div class="col-md-6">
                     <p><strong>Login Time:</strong> <span id="loginTime">-</span></p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authentication - The GC Project</title>
+    <title>Login - Made It Out the Group Chat</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -11,236 +11,423 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        
         .auth-container {
-            max-width: 400px;
-            margin: 50px auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             overflow: hidden;
+            max-width: 900px;
+            width: 100%;
+            margin: 20px;
         }
+        
         .auth-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 40px;
             text-align: center;
         }
-        .auth-body {
-            padding: 30px;
+        
+        .auth-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
         }
-        .form-control {
-            border-radius: 10px;
-            border: 2px solid #e9ecef;
-            padding: 12px 15px;
-            transition: all 0.3s ease;
+        
+        .auth-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 0;
         }
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        
+        .auth-content {
+            padding: 40px;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 10px;
-            padding: 12px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
+        
         .auth-tabs {
             display: flex;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f8f9fa;
         }
+        
         .auth-tab {
             flex: 1;
-            padding: 10px;
+            padding: 15px;
             text-align: center;
             cursor: pointer;
             border-bottom: 3px solid transparent;
             transition: all 0.3s ease;
-        }
-        .auth-tab.active {
-            border-bottom-color: #667eea;
-            color: #667eea;
             font-weight: 600;
+            color: #6c757d;
         }
+        
+        .auth-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .auth-tab:hover {
+            color: #667eea;
+        }
+        
         .auth-form {
             display: none;
         }
+        
         .auth-form.active {
             display: block;
         }
+        
+        .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px 15px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
         .alert {
             border-radius: 10px;
             border: none;
+            padding: 15px;
+            margin-bottom: 20px;
         }
-        .mfa-section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        .loading {
+        
+        .loading-spinner {
             display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
         }
-        .loading.show {
+        
+        .loading-spinner.show {
             display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .mfa-setup {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .qr-code-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+            margin: 15px 0;
+        }
+        
+        .feature-highlights {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-right: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .feature-text {
+            flex: 1;
+        }
+        
+        .feature-text h6 {
+            margin: 0;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .feature-text p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .coming-soon-badge {
+            background: #ffc107;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="auth-container">
-            <div class="auth-header">
-                <h2><i class="fas fa-shield-alt"></i> The GC Project</h2>
-                <p class="mb-0">Secure Authentication</p>
+    <div class="auth-container">
+        <!-- Header -->
+        <div class="auth-header">
+            <h1><i class="fas fa-plane"></i> Made It Out the Group Chat</h1>
+            <p>Transform group travel planning from chaos to coordination</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="auth-content">
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchTab('login')">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </div>
+                <div class="auth-tab" onclick="switchTab('signup')">
+                    <i class="fas fa-user-plus"></i> Sign Up
+                </div>
+                <div class="auth-tab" onclick="switchTab('forgot')">
+                    <i class="fas fa-key"></i> Forgot Password
+                </div>
             </div>
             
-            <div class="auth-body">
-                <!-- Auth Tabs -->
-                <div class="auth-tabs">
-                    <div class="auth-tab active" onclick="switchTab('login')">Login</div>
-                    <div class="auth-tab" onclick="switchTab('signup')">Sign Up</div>
-                </div>
-
-                <!-- Login Form -->
-                <form id="loginForm" class="auth-form active">
-                    <div class="alert alert-danger" id="loginError" style="display: none;"></div>
-                    
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form active">
+                <h4 class="mb-4">Welcome Back!</h4>
+                <form onsubmit="handleLogin(event)">
                     <div class="mb-3">
                         <label for="loginEmail" class="form-label">Email Address</label>
                         <input type="email" class="form-control" id="loginEmail" required>
                     </div>
-                    
                     <div class="mb-3">
                         <label for="loginPassword" class="form-label">Password</label>
                         <input type="password" class="form-control" id="loginPassword" required>
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100 mb-3">
-                        <span class="loading" id="loginLoading">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </span>
-                        <span>Login</span>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <span class="loading-spinner" id="loginLoading"></span>
+                        <i class="fas fa-sign-in-alt"></i> Login
                     </button>
-                    
-                    <div class="text-center">
-                        <a href="#" onclick="switchTab('forgotPassword')" class="text-decoration-none">Forgot Password?</a>
-                    </div>
                 </form>
-
-                <!-- Sign Up Form -->
-                <form id="signupForm" class="auth-form">
-                    <div class="alert alert-danger" id="signupError" style="display: none;"></div>
-                    <div class="alert alert-success" id="signupSuccess" style="display: none;"></div>
-                    
-                    <div class="mb-3">
-                        <label for="signupName" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="signupName" required>
+                <div id="loginError" class="alert alert-danger" style="display: none;"></div>
+                <div id="loginSuccess" class="alert alert-success" style="display: none;"></div>
+            </div>
+            
+            <!-- Sign Up Form -->
+            <div id="signupForm" class="auth-form">
+                <h4 class="mb-4">Join the Adventure!</h4>
+                <form onsubmit="handleSignup(event)">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="signupName" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="signupName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="signupEmail" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="signupEmail" required>
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="signupEmail" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="signupEmail" required>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="signupPhone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="signupPhone" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="signupCountry" class="form-label">Country</label>
+                            <select class="form-control" id="signupCountry" required>
+                                <option value="">Select Country</option>
+                                <option value="US">United States</option>
+                                <option value="UK">United Kingdom</option>
+                                <option value="CA">Canada</option>
+                                <option value="AU">Australia</option>
+                                <option value="DE">Germany</option>
+                                <option value="FR">France</option>
+                                <option value="IT">Italy</option>
+                                <option value="ES">Spain</option>
+                                <option value="NL">Netherlands</option>
+                                <option value="SE">Sweden</option>
+                                <option value="NO">Norway</option>
+                                <option value="DK">Denmark</option>
+                                <option value="FI">Finland</option>
+                                <option value="CH">Switzerland</option>
+                                <option value="AT">Austria</option>
+                                <option value="BE">Belgium</option>
+                                <option value="IE">Ireland</option>
+                                <option value="NZ">New Zealand</option>
+                                <option value="JP">Japan</option>
+                                <option value="KR">South Korea</option>
+                                <option value="SG">Singapore</option>
+                                <option value="HK">Hong Kong</option>
+                                <option value="TW">Taiwan</option>
+                                <option value="IN">India</option>
+                                <option value="BR">Brazil</option>
+                                <option value="MX">Mexico</option>
+                                <option value="AR">Argentina</option>
+                                <option value="CL">Chile</option>
+                                <option value="CO">Colombia</option>
+                                <option value="PE">Peru</option>
+                                <option value="VE">Venezuela</option>
+                                <option value="UY">Uruguay</option>
+                                <option value="PY">Paraguay</option>
+                                <option value="BO">Bolivia</option>
+                                <option value="EC">Ecuador</option>
+                                <option value="GY">Guyana</option>
+                                <option value="SR">Suriname</option>
+                                <option value="GF">French Guiana</option>
+                                <option value="FK">Falkland Islands</option>
+                                <option value="GS">South Georgia</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="signupPhone" class="form-label">Contact Number</label>
-                        <input type="tel" class="form-control" id="signupPhone" required>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="signupPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="signupPassword" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="signupConfirmPassword" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="signupConfirmPassword" required>
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="signupCountry" class="form-label">Country</label>
-                        <select class="form-control" id="signupCountry" required>
-                            <option value="">Select Country</option>
-                            <option value="US">United States</option>
-                            <option value="CA">Canada</option>
-                            <option value="UK">United Kingdom</option>
-                            <option value="AU">Australia</option>
-                            <option value="DE">Germany</option>
-                            <option value="FR">France</option>
-                            <option value="JP">Japan</option>
-                            <option value="IN">India</option>
-                            <option value="BR">Brazil</option>
-                            <option value="MX">Mexico</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="signupPassword" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="signupPassword" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="signupConfirmPassword" class="form-label">Confirm Password</label>
-                        <input type="password" class="form-control" id="signupConfirmPassword" required>
-                    </div>
-                    
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="enableMFA">
                             <label class="form-check-label" for="enableMFA">
-                                Enable Multi-Factor Authentication (MFA)
+                                Enable Multi-Factor Authentication (Recommended)
                             </label>
                         </div>
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100 mb-3">
-                        <span class="loading" id="signupLoading">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </span>
-                        <span>Create Account</span>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <span class="loading-spinner" id="signupLoading"></span>
+                        <i class="fas fa-user-plus"></i> Create Account
                     </button>
                 </form>
-
-                <!-- Forgot Password Form -->
-                <form id="forgotPasswordForm" class="auth-form">
-                    <div class="alert alert-danger" id="forgotError" style="display: none;"></div>
-                    <div class="alert alert-success" id="forgotSuccess" style="display: none;"></div>
-                    
-                    <p class="text-muted mb-3">Enter your email address and we'll send you a link to reset your password.</p>
-                    
+                <div id="signupError" class="alert alert-danger" style="display: none;"></div>
+                <div id="signupSuccess" class="alert alert-success" style="display: none;"></div>
+                
+                <!-- MFA Setup Section -->
+                <div id="mfaSetup" class="mfa-setup" style="display: none;">
+                    <h5><i class="fas fa-shield-alt"></i> Set Up Multi-Factor Authentication</h5>
+                    <p>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
+                    <div class="qr-code-container">
+                        <div id="qrCode"></div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="mfaCode" class="form-label">Enter the 6-digit code from your app:</label>
+                        <input type="text" class="form-control" id="mfaCode" maxlength="6" placeholder="000000">
+                        <button type="button" class="btn btn-primary mt-2" onclick="verifyMFA()">
+                            <i class="fas fa-check"></i> Verify & Complete Setup
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Forgot Password Form -->
+            <div id="forgotPasswordForm" class="auth-form">
+                <h4 class="mb-4">Reset Your Password</h4>
+                <p class="text-muted mb-4">Enter your email address and we'll send you a link to reset your password.</p>
+                <form onsubmit="handleForgotPassword(event)">
                     <div class="mb-3">
                         <label for="forgotEmail" class="form-label">Email Address</label>
                         <input type="email" class="form-control" id="forgotEmail" required>
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100 mb-3">
-                        <span class="loading" id="forgotLoading">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </span>
-                        <span>Send Reset Link</span>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <span class="loading-spinner" id="forgotLoading"></span>
+                        <i class="fas fa-paper-plane"></i> Send Reset Link
                     </button>
-                    
-                    <div class="text-center">
-                        <a href="#" onclick="switchTab('login')" class="text-decoration-none">Back to Login</a>
-                    </div>
                 </form>
-
-                <!-- MFA Setup Section -->
-                <div id="mfaSetup" class="mfa-section" style="display: none;">
-                    <h5><i class="fas fa-mobile-alt"></i> Multi-Factor Authentication Setup</h5>
-                    <p class="text-muted">Scan the QR code with your authenticator app or enter the code manually.</p>
-                    
-                    <div class="text-center mb-3">
-                        <div id="qrCode"></div>
+                <div id="forgotError" class="alert alert-danger" style="display: none;"></div>
+                <div id="forgotSuccess" class="alert alert-success" style="display: none;"></div>
+            </div>
+            
+            <!-- Feature Highlights -->
+            <div class="feature-highlights">
+                <h5 class="mb-3"><i class="fas fa-star"></i> Why Choose Made It Out the Group Chat?</h5>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-calendar-alt"></i>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="mfaCode" class="form-label">Verification Code</label>
-                        <input type="text" class="form-control" id="mfaCode" placeholder="Enter 6-digit code">
+                    <div class="feature-text">
+                        <h6>Smart Calendar Sync <span class="coming-soon-badge">Coming Soon</span></h6>
+                        <p>Automatically sync with Google, Apple & Microsoft calendars to find common available dates</p>
                     </div>
-                    
-                    <button type="button" class="btn btn-success w-100" onclick="verifyMFA()">
-                        <span class="loading" id="mfaLoading">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </span>
-                        <span>Verify & Complete Setup</span>
-                    </button>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="feature-text">
+                        <h6>Group Collaboration <span class="coming-soon-badge">Coming Soon</span></h6>
+                        <p>Create travel groups, vote on destinations, and plan together in real-time</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-piggy-bank"></i>
+                    </div>
+                    <div class="feature-text">
+                        <h6>Shared Money Pot <span class="coming-soon-badge">Coming Soon</span></h6>
+                        <p>Split costs automatically and manage group expenses with our integrated payment system</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="feature-text">
+                        <h6>AI Trip Recommendations <span class="coming-soon-badge">Coming Soon</span></h6>
+                        <p>Get personalized trip suggestions based on your group's preferences and budget</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="feature-text">
+                        <h6>Secure & Private</h6>
+                        <p>Bank-level security with MFA protection and end-to-end encryption for all your data</p>
+                    </div>
                 </div>
             </div>
         </div>

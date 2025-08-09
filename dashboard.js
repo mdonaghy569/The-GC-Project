@@ -30,17 +30,42 @@ let currentUser = null;
 let userData = null;
 let firestoreListeners = []; // Array to track active listeners
 
-// DOM Elements
-const userName = document.getElementById('userName');
-const userEmail = document.getElementById('userEmail');
-const userPhone = document.getElementById('userPhone');
-const userCountry = document.getElementById('userCountry');
-const userAvatar = document.getElementById('userAvatar');
-const mfaStatus = document.getElementById('mfaStatus');
-const loginTime = document.getElementById('loginTime');
-const sessionStatus = document.getElementById('sessionStatus');
-const userId = document.getElementById('userId');
-const emailVerified = document.getElementById('emailVerified');
+// DOM Elements - Initialize after DOM is ready
+let userName, userEmail, userPhone, userCountry, userAvatar, mfaStatus, loginTime, sessionStatus, userId, emailVerified;
+
+// Initialize DOM elements
+function initializeDOMElements() {
+    console.log('Initializing DOM elements...');
+    
+    userName = document.getElementById('userName');
+    userEmail = document.getElementById('userEmail');
+    userPhone = document.getElementById('userPhone');
+    userCountry = document.getElementById('userCountry');
+    userAvatar = document.getElementById('userAvatar');
+    mfaStatus = document.getElementById('mfaStatus');
+    loginTime = document.getElementById('loginTime');
+    sessionStatus = document.getElementById('sessionStatus');
+    userId = document.getElementById('userId');
+    emailVerified = document.getElementById('emailVerified');
+    
+    // Log which elements were found
+    console.log('DOM elements found:', {
+        userName: !!userName,
+        userEmail: !!userEmail,
+        userPhone: !!userPhone,
+        userCountry: !!userCountry,
+        userAvatar: !!userAvatar,
+        mfaStatus: !!mfaStatus,
+        loginTime: !!loginTime,
+        sessionStatus: !!sessionStatus,
+        userId: !!userId,
+        emailVerified: !!emailVerified
+    });
+    
+    if (!userName || !userEmail || !userPhone || !userCountry || !userAvatar || !mfaStatus || !loginTime || !sessionStatus || !userId || !emailVerified) {
+        console.warn('Some DOM elements not found - dashboard may not display correctly');
+    }
+}
 
 // Firestore listener management
 function startFirestoreListeners() {
@@ -133,6 +158,9 @@ function stopFirestoreListeners() {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DOM elements after DOM is ready
+    initializeDOMElements();
+
     // Check authentication state
     onAuthStateChanged(auth, function(user) {
         if (user) {
@@ -159,70 +187,197 @@ async function loadUserData() {
         return;
     }
     
+    // Ensure DOM elements are initialized
+    if (!userName || !userEmail) {
+        console.warn('loadUserData: DOM elements not initialized, calling initializeDOMElements');
+        initializeDOMElements();
+    }
+    
     try {
         console.log('Loading user data from Firestore document: users/' + currentUser.uid);
+        
+        // Verify authentication state before proceeding
+        const token = await auth.currentUser.getIdToken();
+        console.log('User token available, length:', token.length);
+        
         const userDocRef = doc(db, 'users', currentUser.uid);
         const userDoc = await getDoc(userDocRef);
         
         if (userDoc.exists()) {
             userData = userDoc.data();
-            console.log('User data loaded successfully from Firestore');
+            console.log('User data loaded successfully from Firestore:', userData);
             updateUserInterface();
         } else {
-            console.error('User document not found in Firestore');
-            showError('User profile not found');
+            console.error('User document not found in Firestore for UID:', currentUser.uid);
+            console.log('Creating default user data structure');
+            // Create a default user data structure
+            userData = {
+                name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Unknown User',
+                email: currentUser.email,
+                phone: '-',
+                country: '-',
+                mfaEnabled: false
+            };
+            updateUserInterface();
+            showError('User profile not found - using default data');
         }
     } catch (error) {
         console.error('Error loading user data from Firestore:', error);
-        showError('Failed to load user data');
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        
+        // Create fallback user data
+        userData = {
+            name: currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Unknown User',
+            email: currentUser?.email || 'No email',
+            phone: '-',
+            country: '-',
+            mfaEnabled: false
+        };
+        
+        try {
+            updateUserInterface();
+        } catch (uiError) {
+            console.error('Error updating UI with fallback data:', uiError);
+        }
+        
+        showError('Failed to load user data - using fallback data');
     }
 }
 
 // Update user interface with user data
 function updateUserInterface() {
-    if (!userData) return;
-    
-    // Update user information
-    userName.textContent = userData.name || 'Unknown User';
-    userEmail.textContent = currentUser.email;
-    userPhone.textContent = userData.phone || '-';
-    userCountry.textContent = userData.country || '-';
-    
-    // Update user avatar with initials
-    const initials = userData.name ? userData.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
-    userAvatar.innerHTML = initials;
-    
-    // Update MFA status
-    if (userData.mfaEnabled) {
-        mfaStatus.innerHTML = '<span class="mfa-badge"><i class="fas fa-shield-alt"></i> MFA Enabled</span>';
-    } else {
-        mfaStatus.innerHTML = '<span class="text-muted"><i class="fas fa-shield-alt"></i> MFA Disabled</span>';
+    if (!userData) {
+        console.warn('updateUserInterface: No user data available');
+        return;
     }
     
-    // Update authentication status
-    updateAuthStatus();
+    // Ensure DOM elements are initialized
+    if (!userName || !userEmail) {
+        console.warn('updateUserInterface: DOM elements not initialized, calling initializeDOMElements');
+        initializeDOMElements();
+    }
+    
+    try {
+        // Update user information with null checks
+        if (userName) userName.textContent = userData.name || 'Unknown User';
+        if (userEmail) userEmail.textContent = currentUser?.email || userData.email || 'No email';
+        if (userPhone) userPhone.textContent = userData.phone || '-';
+        if (userCountry) userCountry.textContent = userData.country || '-';
+        
+        // Update user avatar with initials
+        if (userAvatar) {
+            const initials = userData.name ? userData.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
+            userAvatar.innerHTML = initials;
+        }
+        
+        // Update MFA status
+        if (mfaStatus) {
+            if (userData.mfaEnabled) {
+                mfaStatus.innerHTML = '<span class="mfa-badge"><i class="fas fa-shield-alt"></i> MFA Enabled</span>';
+            } else {
+                mfaStatus.innerHTML = '<span class="text-muted"><i class="fas fa-shield-alt"></i> MFA Disabled</span>';
+            }
+        }
+        
+        // Update authentication status
+        updateAuthStatus();
+        
+        // Update travel stats (placeholder data for now)
+        updateTravelStats();
+        
+        console.log('User interface updated successfully');
+    } catch (error) {
+        console.error('Error updating user interface:', error);
+        console.error('Error details:', error.message);
+    }
+}
+
+// Update travel statistics
+function updateTravelStats() {
+    try {
+        // These would normally come from Firestore, but for now we'll use placeholder data
+        const totalTripsElement = document.getElementById('totalTrips');
+        const totalGroupsElement = document.getElementById('totalGroups');
+        const totalFriendsElement = document.getElementById('totalFriends');
+        const totalSpentElement = document.getElementById('totalSpent');
+        
+        if (totalTripsElement) totalTripsElement.textContent = '0';
+        if (totalGroupsElement) totalGroupsElement.textContent = '0';
+        if (totalFriendsElement) totalFriendsElement.textContent = '0';
+        if (totalSpentElement) totalSpentElement.textContent = '$0';
+        
+        console.log('Travel stats updated with placeholder data');
+    } catch (error) {
+        console.error('Error updating travel stats:', error);
+    }
+}
+
+// Enhanced group travel planning functions
+function createNewTrip() {
+    console.log('Creating new trip...');
+    // This would open a trip creation modal or navigate to trip creation page
+    alert('🚀 Trip Creation Coming Soon!\n\nThis feature will include:\n• Destination selection with AI recommendations\n• Date coordination with calendar sync\n• Budget planning and cost splitting\n• Group invitation system\n• Real-time collaboration tools');
+}
+
+function joinGroup() {
+    console.log('Joining group...');
+    alert('👥 Group Joining Coming Soon!\n\nThis feature will include:\n• Browse available travel groups\n• Accept invitations from friends\n• View group details and members\n• Participate in group decisions\n• Real-time group chat');
+}
+
+function syncCalendar() {
+    console.log('Syncing calendar...');
+    alert('📅 Calendar Sync Coming Soon!\n\nThis feature will include:\n• Google Calendar integration\n• Apple Calendar integration\n• Microsoft Outlook integration\n• Automatic availability matching\n• Smart date suggestions');
+}
+
+function openMoneyPot() {
+    console.log('Opening money pot...');
+    alert('💰 Money Pot Coming Soon!\n\nThis feature will include:\n• Create shared payment pools\n• Automatic cost splitting\n• Secure payment processing\n• Expense tracking and reporting\n• Group financial management');
+}
+
+function createNewGroup() {
+    console.log('Creating new group...');
+    alert('👨‍👩‍👧‍👦 Group Creation Coming Soon!\n\nThis feature will include:\n• Create travel groups\n• Invite friends via email\n• Set group preferences\n• Choose group leader\n• Start collaborative planning');
 }
 
 // Update authentication status
 function updateAuthStatus() {
-    if (!currentUser) return;
-    
-    // Update login time
-    const loginTimestamp = new Date(currentUser.metadata.lastSignInTime);
-    loginTime.textContent = loginTimestamp.toLocaleString();
-    
-    // Update user ID
-    userId.textContent = currentUser.uid;
-    
-    // Update email verification status
-    if (currentUser.emailVerified) {
-        emailVerified.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> Verified</span>';
-    } else {
-        emailVerified.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Not Verified</span>';
+    if (!currentUser) {
+        console.warn('updateAuthStatus: No current user available');
+        return;
     }
     
-    // Session status is always active if we're here
-    sessionStatus.innerHTML = '<span class="text-success"><i class="fas fa-circle"></i> Active</span>';
+    try {
+        // Update login time
+        if (loginTime) {
+            const loginTimestamp = new Date(currentUser.metadata.lastSignInTime);
+            loginTime.textContent = loginTimestamp.toLocaleString();
+        }
+        
+        // Update user ID
+        if (userId) {
+            userId.textContent = currentUser.uid;
+        }
+        
+        // Update email verification status
+        if (emailVerified) {
+            if (currentUser.emailVerified) {
+                emailVerified.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> Verified</span>';
+            } else {
+                emailVerified.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Not Verified</span>';
+            }
+        }
+        
+        // Session status is always active if we're here
+        if (sessionStatus) {
+            sessionStatus.innerHTML = '<span class="text-success"><i class="fas fa-circle"></i> Active</span>';
+        }
+        
+        console.log('Authentication status updated successfully');
+    } catch (error) {
+        console.error('Error updating authentication status:', error);
+        console.error('Error details:', error.message);
+    }
 }
 
 // Logout function
@@ -267,9 +422,18 @@ window.dashboardFunctions = {
     refreshUserData,
     updateProfile,
     getCurrentUser: () => currentUser,
-    getUserData: () => userData
+    createNewTrip,
+    joinGroup,
+    syncCalendar,
+    openMoneyPot,
+    createNewGroup
 };
 
 // Override placeholder functions with real implementations
 window.logout = logout;
-window.openSettings = openSettings; 
+window.openSettings = openSettings;
+window.createNewTrip = createNewTrip;
+window.joinGroup = joinGroup;
+window.syncCalendar = syncCalendar;
+window.openMoneyPot = openMoneyPot;
+window.createNewGroup = createNewGroup; 
