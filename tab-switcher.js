@@ -16,9 +16,9 @@ function switchTab(tabName) {
         document.querySelector('.auth-tab:first-child').classList.add('active');
     } else if (tabName === 'signup') {
         document.getElementById('signupForm').classList.add('active');
-        document.querySelector('.auth-tab:last-child').classList.add('active');
-    } else if (tabName === 'forgotPassword') {
-        document.getElementById('forgotPasswordForm').classList.add('active');
+        document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
+    } else if (tabName === 'forgotPasswordForm') {
+        document.getElementById('.auth-tab:nth-child(3)').classList.add('active');
     }
     
     // Clear all error messages

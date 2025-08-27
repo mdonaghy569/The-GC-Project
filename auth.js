@@ -1,7 +1,23 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { initializeFirestore, getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    sendPasswordResetEmail, 
+    signOut, 
+    onAuthStateChanged,
+    setPersistence,
+    browserSessionPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    getDoc,
+    initializeFirestore,
+    persistentLocalCache,
+    persistentSingleTabManager
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -14,17 +30,33 @@ const firebaseConfig = {
     measurementId: "G-E2CWRXZNYN"
 };
 
-// Initialize Firebase
+// Initialize Firebase with performance configuration
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-// Use initializeFirestore with long polling to avoid WebChannel 400s in some environments
-initializeFirestore(app, { experimentalAutoDetectLongPolling: true, useFetchStreams: false });
-const db = getFirestore(app);
 
+// Set session persistence for Auth
+setPersistence(auth, browserSessionPersistence)
+    .then(() => {
+        console.log('Session persistence set successfully');
+    })
+    .catch((error) => {
+        console.error('Error setting persistence:', error);
+    });
+
+// Initialize Firestore with persistent cache configuration
+const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+        tabManager: persistentSingleTabManager()
+    })
+});
+
+// Initialize cache for frequently accessed data
+const dataCache = new Map();
+
+// Cache frequently accessed data
+const cache = new Map();
 // Global variables
 let currentUser = null;
-let mfaSecret = null;
-let firestoreListeners = []; // Array to track active listeners
 
 // DOM Elements
 const loginForm = document.getElementById('loginForm');
@@ -69,40 +101,28 @@ async function readUserDocSafely(userId) {
         console.warn('readUserDocSafely: No authenticated user — skipping Firestore');
         return null;
     }
+
+    // Check cache first
+    if (cache.has(userId)) {
+        return cache.get(userId);
+    }
+
     try {
-        console.log('readUserDocSafely: getDoc users/' + userId);
         const ref = doc(db, 'users', userId);
         const snap = await getDoc(ref);
-        if (snap.exists()) return snap.data();
-        console.warn('readUserDocSafely: Document does not exist via SDK');
-        return null;
-    } catch (sdkError) {
-        console.warn('readUserDocSafely: SDK getDoc failed, falling back to REST', sdkError);
-        try {
-            const token = await auth.currentUser.getIdToken();
-            const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/users/${userId}`;
-            const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-            if (!resp.ok) {
-                console.warn('readUserDocSafely: REST fetch failed', resp.status, await resp.text());
-                return null;
-            }
-            const json = await resp.json();
-            // Map Firestore REST fields to plain JS
-            const fields = json.fields || {};
-            const data = {
-                name: fields.name?.stringValue,
-                email: fields.email?.stringValue,
-                phone: fields.phone?.stringValue,
-                country: fields.country?.stringValue,
-                mfaEnabled: fields.mfaEnabled?.booleanValue === true,
-                mfaSecret: fields.mfaSecret?.stringValue
-            };
-            console.log('readUserDocSafely: REST fetch success');
+        
+        if (snap.exists()) {
+            const data = snap.data();
+            // Cache the result for subsequent requests
+            cache.set(userId, data);
             return data;
-        } catch (restError) {
-            console.error('readUserDocSafely: REST fallback failed', restError);
-            return null;
         }
+        
+        console.warn('readUserDocSafely: Document does not exist');
+        return null;
+    } catch (error) {
+        console.error('Error reading user document:', error);
+        return null;
     }
 }
 
